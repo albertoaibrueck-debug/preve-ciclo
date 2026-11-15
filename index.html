@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Préve Ciclo</title>
+<meta name="theme-color" content="#f472b6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Préve Ciclo">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#fdf2f8}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#1f2937}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+#app{max-width:480px;margin:0 auto;background:#fff;min-height:100vh;position:relative;padding-bottom:110px}
+
+/* Cabeçalho */
+.header{background:#f472b6;padding:calc(env(safe-area-inset-top,0px) + 44px) 20px 40px;border-radius:0 0 40px 40px}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.greeting{color:#fce7f3;font-size:12px;font-weight:700;text-transform:uppercase}
+.title{color:#fff;font-size:28px;font-weight:800;margin-top:4px}
+.gear{width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);font-size:18px;color:#fff}
+.sync{display:inline-block;margin-top:6px;color:#fce7f3;font-size:11px;font-weight:600}
+.quote{background:rgba(255,255,255,.15);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,.2)}
+.quote-label{color:#fce7f3;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.quote-text{color:#fff;font-size:17px;font-weight:700;margin-top:6px;line-height:24px}
+
+/* Cartões de previsão */
+.cards{display:flex;gap:10px;margin-top:-24px;padding:0 20px}
+.card{flex:1;min-width:0;border-radius:20px;padding:14px 8px;text-align:center;box-shadow:0 4px 8px rgba(0,0,0,.08)}
+.card.period{background:#fff1f2}.card.fertile{background:#faf5ff}.card.weather{background:#fffbeb}
+.card .emoji{font-size:24px;margin-bottom:4px}
+.card .label{font-size:11px;color:#6b7280;font-weight:700}
+.card .value{font-size:20px;font-weight:800;color:#1f2937;margin-top:4px;white-space:nowrap}
+.card .unit{font-size:10px;color:#9ca3af;margin-top:2px;line-height:13px}
+
+/* Calendário */
+.cal{padding:0 20px;margin-top:24px}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.month{font-size:18px;font-weight:800;color:#1f2937;text-transform:capitalize}
+.arrow{padding:8px 12px;font-size:24px;color:#4b5563;font-weight:700;line-height:1}
+.week{display:flex;margin-bottom:8px}
+.week span{flex:1;text-align:center;font-size:12px;font-weight:700;color:#9ca3af}
+.grid{display:flex;flex-wrap:wrap}
+.cell{width:14.2857%;aspect-ratio:1;padding:2px}
+.day{width:100%;height:100%;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;position:relative;border:1.5px solid transparent}
+.day .n{font-size:14px;color:#374151;font-weight:600}
+.day.today{background:#f3f4f6}.day.today .n{color:#f43f5e}
+.day.fertile{background:#faf5ff}
+.day.pred{border:1.5px dashed #fda4af;background:#fff7f8}
+.day.period{background:#ffe4e6;border-color:transparent}.day.period .n{color:#be123c}
+.day.future .n{color:#9ca3af}
+.day.today{box-shadow:inset 0 0 0 1.5px #f43f5e}
+.dots{display:flex;gap:2px;margin-top:3px;height:5px}
+.dot{width:5px;height:5px;border-radius:3px}
+.dot.p{background:#f43f5e}.dot.f{background:#a855f7}.dot.o{background:#f9a8d4;border:1px solid #ec4899}.dot.s{background:#fb7185;border-radius:1px;transform:rotate(45deg)}
+.day .mood{position:absolute;top:1px;right:2px;font-size:10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 22px 0;font-size:11px;color:#6b7280;font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:4px}
+
+/* Blocos abaixo do calendário */
+.block{margin:18px 20px 0;border-radius:20px;padding:16px;box-shadow:0 4px 8px rgba(0,0,0,.06)}
+.block h3{margin:0 0 8px;font-size:14px;font-weight:800;color:#374151}
+.block.stats{background:#fff1f2}
+.block.tips{background:#f3e8ff}
+.block.tips li,.block.tips p{color:#7e22ce;font-weight:600;font-size:13px;line-height:19px}
+.block ul{margin:0;padding-left:18px}
+.stat-row{display:flex;gap:10px}
+.stat{flex:1;background:#fff;border-radius:14px;padding:10px;text-align:center}
+.stat b{display:block;font-size:20px;font-weight:800}
+.stat small{font-size:10px;color:#9ca3af;font-weight:600}
+.note{font-size:11px;color:#6b7280;margin:10px 0 0;line-height:16px}
+.banner{margin:18px 20px 0;background:#fffbeb;border-radius:16px;padding:12px 14px;font-size:12px;color:#92400e;font-weight:600;line-height:17px}
+.foot{font-size:10px;color:#9ca3af;text-align:center;margin:22px 30px 0;line-height:15px}
+
+/* Botão flutuante */
+.fab{position:fixed;right:max(20px,calc(50vw - 220px));bottom:calc(30px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:28px;background:#f43f5e;color:#fff;font-size:28px;font-weight:300;box-shadow:0 6px 10px rgba(244,63,94,.4);z-index:5}
+
+/* Folha (modal) */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.overlay.open{display:flex}
+.sheet{background:#fff;border-radius:32px 32px 0 0;padding:24px 24px calc(24px + env(safe-area-inset-bottom,0px));max-height:90vh;width:100%;max-width:480px;overflow-y:auto;animation:up .25s ease-out}
+@keyframes up{from{transform:translateY(40%);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.handle{width:48px;height:5px;background:#d1d5db;border-radius:3px;margin:0 auto 16px}
+.s-title{font-size:20px;font-weight:800;color:#1f2937}
+.s-sub{font-size:14px;color:#6b7280;margin-bottom:20px}
+.sec{font-size:14px;font-weight:700;color:#374151;margin:16px 0 8px}
+.row{display:flex;gap:10px}.row.tight{gap:8px}
+.toggle{flex:1;padding:12px 0;border-radius:12px;border:2px solid #e5e7eb;font-weight:600;color:#4b5563}
+.toggle.on{border-color:#f43f5e;background:#fff1f2;color:#f43f5e}
+.opt{flex:1;padding:10px 0;border-radius:12px;border:1px solid #e5e7eb;font-size:13px;font-weight:500;color:#4b5563}
+.opt.on{border-color:#f43f5e;background:#fff1f2;color:#f43f5e;font-weight:700}
+.moodb{flex:1;padding:8px 0 6px;border-radius:12px;border:1px solid #e5e7eb;font-size:24px;line-height:1.1}
+.moodb small{display:block;font-size:9px;color:#6b7280;font-weight:600;margin-top:3px}
+.moodb.on{border-color:#facc15;background:#fefce8}
+.tip{font-size:12px;color:#7e22ce;font-weight:600;margin-top:8px;background:#f3e8ff;padding:10px 12px;border-radius:10px;line-height:18px}
+.tip ul{margin:4px 0 0;padding-left:16px}
+textarea,input[type=text],input[type=password]{width:100%;border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;color:#374151;background:#fff}
+textarea{resize:none;height:64px}
+.save{margin-top:24px;width:100%;background:#f43f5e;padding:16px 0;border-radius:16px;color:#fff;font-weight:700;font-size:16px}
+.ghost{margin-top:10px;width:100%;padding:12px 0;border-radius:16px;color:#9ca3af;font-weight:600;font-size:13px}
+.btn2{margin-top:10px;width:100%;padding:12px 0;border-radius:14px;border:2px solid #f43f5e;color:#f43f5e;font-weight:700;font-size:14px}
+.btn2:disabled{border-color:#e5e7eb;color:#9ca3af}
+.help{font-size:12px;color:#6b7280;line-height:18px;margin:6px 0 0}
+.pill{display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#f3f4f6;color:#4b5563}
+.pill.ok{background:#dcfce7;color:#166534}
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1f2937;color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:99px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;max-width:86vw;text-align:center}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="greeting" id="greeting"></div>
+        <div class="title">Préve Ciclo</div>
+        <div class="sync" id="sync"></div>
+      </div>
+      <button class="gear" id="gear" aria-label="Configurações">⚙︎</button>
+    </div>
+    <div class="quote">
+      <div class="quote-label" id="quoteLabel"></div>
+      <div class="quote-text" id="quoteText"></div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card period"><div class="emoji">🩸</div><div class="label" id="c1l">Próxima</div><div class="value" id="c1v">--</div><div class="unit" id="c1u"></div></div>
+    <div class="card fertile"><div class="emoji">🌸</div><div class="label">Fertilidade</div><div class="value" id="c2v">--</div><div class="unit" id="c2u"></div></div>
+    <div class="card weather"><div class="emoji" id="c3e">☀️</div><div class="label">Hoje</div><div class="value" id="c3v">--</div><div class="unit" id="c3u">carregando...</div></div>
+  </div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="cal">
+    <div class="cal-head">
+      <button class="arrow" id="prev" aria-label="Mês anterior">‹</button>
+      <div class="month" id="month"></div>
+      <button class="arrow" id="next" aria-label="Próximo mês">›</button>
+    </div>
+    <div class="week"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="legend">
+    <span><i style="background:#ffe4e6"></i>Menstruação</span>
+    <span><i style="border:1.5px dashed #fda4af"></i>Prevista</span>
+    <span><i style="background:#f3e8ff"></i>Fértil</span>
+    <span><i style="background:#f9a8d4;border-radius:5px"></i>Ovulação</span>
+  </div>
+
+  <div class="block tips" id="tips" hidden></div>
+  <div class="block stats" id="stats"></div>
+  <p class="foot">As previsões são estimativas e melhoram a cada ciclo registrado. O período fértil previsto não serve como método contraceptivo, e o app não substitui orientação médica.</p>
+
+  <button class="fab" id="fab" aria-label="Registrar hoje">+</button>
+</div>
+
+<div class="overlay" id="dayOv"><div class="sheet" id="daySheet"></div></div>
+<div class="overlay" id="cfgOv"><div class="sheet" id="cfgSheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* Préve Ciclo — lógica do ciclo (usada pela página e pelo service worker) */
+(function (root) {
+  'use strict';
+  var DAY = 86400000;
+
+  // Dias são tratados como números inteiros (dias desde 1970) para evitar problemas de fuso.
+  function num(k) { var p = k.split('-'); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / DAY); }
+  function key(n) { return new Date(n * DAY).toISOString().slice(0, 10); }
+  function today(now) {
+    now = now || new Date();
+    return Math.round(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY);
+  }
+  function avg(a) { return a.reduce(function (s, x) { return s + x; }, 0) / a.length; }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  function plural(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
+
+  /* Analisa os registros e devolve médias + previsões.
+     As médias se ajustam sozinhas a cada nova menstruação registrada. */
+  function analyze(entries, t) {
+    entries = entries || {};
+    if (t == null) t = today();
+    var days = Object.keys(entries)
+      .filter(function (k) { return entries[k] && entries[k].period; })
+      .map(num).filter(function (d) { return d <= t; })
+      .sort(function (a, b) { return a - b; });
+
+    // Agrupa dias seguidos (tolerando 1 dia sem registro) em menstruações
+    var periods = [];
+    days.forEach(function (d) {
+      var p = periods[periods.length - 1];
+      if (p && d - p.end <= 2) p.end = d; else periods.push({ start: d, end: d });
+    });
+
+    var last = periods[periods.length - 1] || null;
+    var ongoing = !!last && t - last.end <= 1;
+
+    // Duração média: só menstruações já encerradas, as 6 mais recentes
+    var done = periods.filter(function (p, i) { return !(ongoing && i === periods.length - 1); });
+    var durs = done.slice(-6).map(function (p) { return p.end - p.start + 1; });
+    var periodLen = durs.length ? clamp(Math.round(avg(durs)), 2, 10) : 5;
+    if (ongoing) periodLen = Math.max(periodLen, last.end - last.start + 1);
+
+    // Tamanho do ciclo: intervalo entre inícios; descarta intervalos improváveis
+    // (menos de 15 ou mais de 60 dias costumam ser falha de registro).
+    var gaps = [];
+    for (var i = 1; i < periods.length; i++) gaps.push(periods[i].start - periods[i - 1].start);
+    var valid = gaps.filter(function (g) { return g >= 15 && g <= 60; }).slice(-6);
+    var cycleLen = 28, spread = null;
+    if (valid.length) {
+      // média ponderada: ciclos mais recentes pesam mais
+      var sw = 0, sx = 0;
+      valid.forEach(function (g, j) { sw += j + 1; sx += g * (j + 1); });
+      cycleLen = Math.round(sx / sw);
+      if (valid.length >= 2) {
+        var m = avg(valid);
+        spread = Math.round(Math.sqrt(avg(valid.map(function (g) { return (g - m) * (g - m); }))));
+      }
+    }
+
+    var res = {
+      periods: periods, last: last, ongoing: ongoing,
+      periodLen: periodLen, durationsUsed: durs.length,
+      cycleLen: cycleLen, cyclesUsed: valid.length, spread: spread,
+      cycleDay: last ? t - last.start + 1 : null,
+      next: null, rawNext: null, late: 0, predicted: [], windows: []
+    };
+    if (!last) return res;
+
+    var raw = last.start + cycleLen;
+    res.rawNext = raw;
+    res.late = (!ongoing && t > raw) ? t - raw : 0;
+    var base = res.late ? t : raw;          // se atrasou, pode vir a qualquer momento
+    res.next = base;
+    for (var c = 0; c < 6; c++) {
+      var s = base + c * cycleLen;
+      res.predicted.push({ start: s, end: s + periodLen - 1 });
+      var ov = (c === 0 ? raw : s) - 14;    // ovulação ~14 dias antes da menstruação
+      res.windows.push({ start: ov - 5, end: ov + 1, ov: ov });
+    }
+    return res;
+  }
+
+  function inPredicted(a, d) {
+    return a.predicted.some(function (p) { return d >= p.start && d <= p.end; });
+  }
+  function windowOf(a, d) {
+    for (var i = 0; i < a.windows.length; i++) {
+      if (d >= a.windows[i].start && d <= a.windows[i].end) return a.windows[i];
+    }
+    return null;
+  }
+
+  // Fase do dia: 'menstruacao' | 'tpm' | 'fertil' | 'normal'
+  function phase(a, entries, t) {
+    var e = entries && entries[key(t)];
+    if ((e && e.period) || a.ongoing) return 'menstruacao';
+    if (!a.last) return 'normal';
+    if (a.late > 0) return 'tpm';
+    var d = a.next - t;
+    if (d === 0) return 'menstruacao';
+    if (d >= 1 && d <= 5) return 'tpm';
+    if (windowOf(a, t)) return 'fertil';
+    return 'normal';
+  }
+
+  function fertileInfo(a, t) {
+    for (var i = 0; i < a.windows.length; i++) {
+      var w = a.windows[i];
+      if (w.end < t) continue;
+      if (w.start <= t) return { now: true, isOv: w.ov === t, left: w.end - t };
+      return { now: false, days: w.start - t };
+    }
+    return null;
+  }
+
+  function cycleMessage(entries, t) {
+    if (t == null) t = today();
+    var a = analyze(entries, t);
+    if (!a.last) {
+      return { title: 'Préve Ciclo 💕', body: 'Registre a última menstruação para começar as previsões.' };
+    }
+    var p, d = a.next - t;
+    if (a.ongoing) p = '🩸 Dia ' + a.cycleDay + ' da menstruação · próxima em ' + plural(d, 'dia', 'dias');
+    else if (a.late > 0) p = '🩸 Menstruação atrasada ' + plural(a.late, 'dia', 'dias') + ' — pode vir a qualquer momento';
+    else if (d === 0) p = '🩸 Menstruação prevista para hoje';
+    else p = '🩸 ' + (d === 1 ? 'Falta 1 dia' : 'Faltam ' + d + ' dias') + ' para a menstruação';
+
+    var f = fertileInfo(a, t), q = '';
+    if (f) {
+      if (f.now) q = f.isOv ? '🌸 Ovulação prevista para hoje' : '🌸 Período fértil agora (mais ' + plural(f.left, 'dia', 'dias') + ')';
+      else q = '🌸 ' + (f.days === 1 ? 'Falta 1 dia' : 'Faltam ' + f.days + ' dias') + ' para o período fértil';
+    }
+    return { title: 'Préve Ciclo 💕', body: p + (q ? '\n' + q : '') };
+  }
+
+  function fetchWeather(lat, lon) {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1';
+    return fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.daily) return null;
+      return {
+        max: Math.round(d.daily.temperature_2m_max[0]),
+        min: Math.round(d.daily.temperature_2m_min[0]),
+        rain: d.daily.precipitation_probability_max[0]
+      };
+    });
+  }
+
+  function weatherMessage(w, city) {
+    if (!w) return null;
+    var icon = w.rain >= 60 ? '🌧️' : w.rain >= 30 ? '⛅' : '☀️';
+    return {
+      title: icon + ' ' + (city || 'Hoje') + ' hoje',
+      body: 'Máx ' + w.max + '° · Mín ' + w.min + '° · ' + (w.rain == null ? '--' : w.rain) + '% de chance de chuva'
+    };
+  }
+
+  root.Ciclo = {
+    num: num, key: key, today: today, plural: plural,
+    analyze: analyze, phase: phase, fertileInfo: fertileInfo,
+    inPredicted: inPredicted, windowOf: windowOf,
+    cycleMessage: cycleMessage, fetchWeather: fetchWeather, weatherMessage: weatherMessage
+  };
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+(function () {
+'use strict';
+var C = Ciclo;
+var $ = function (id) { return document.getElementById(id); };
+
+/* ---------- armazenamento (com reserva em memória) ---------- */
+var mem = {};
+var store = {
+  get: function (k, d) { try { var v = localStorage.getItem('pc_' + k); return v ? JSON.parse(v) : (k in mem ? mem[k] : d); } catch (e) { return k in mem ? mem[k] : d; } },
+  set: function (k, v) { mem[k] = v; try { localStorage.setItem('pc_' + k, JSON.stringify(v)); } catch (e) {} }
+};
+var entries = store.get('entries', {});
+var pending = store.get('pending', {});
+var cfg = store.get('cfg', null);                 // {url, key}
+var loc = store.get('loc', { lat: -25.43, lon: -49.27, name: 'Curitiba' });
+var vapid = store.get('vapid', null);
+var weather = null, syncState = '', pushOn = false;
+var now0 = new Date(), view = { y: now0.getFullYear(), m: now0.getMonth() };
+
+/* ---------- frases ---------- */
+var FRASES = {
+  normal: {
+    manha: ['Bom dia, meu amor! Que seu dia seja leve como uma flor. 🌸', 'Acordei pensando em você. Você é meu sol de todas as manhãs. ☀️', 'Mais um dia para cuidar de você. Conta comigo! 💕', 'Bom dia, linda! O mundo fica melhor quando você sorri. 😊', 'Que hoje te aconteçam só coisas boas. Eu torço por você daqui. 🍀', 'Bom dia! Já te falei hoje que tenho sorte de ter você? 💖'],
+    tarde: ['Boa tarde, vida! Um cafezinho e um abraço meu para recarregar. ☕', 'Passando para lembrar: você é incrível. 💫', 'Metade do dia já foi, e eu sigo com saudade de você. 💌', 'Respira fundo. O dia já está ganhando cor com você nele. 🌈', 'Boa tarde, amor! Orgulho de você em cada detalhe. 🌷', 'Só um lembrete da tarde: te amo mais que ontem. 💕'],
+    noite: ['Boa noite, meu amor. Que seu descanso seja doce e tranquilo. 🌙', 'Te desejo uma noite cheia de sonhos lindos. Te amo! ⭐', 'O melhor do meu dia é terminar ele com você. 💞', 'Hora de desacelerar. Você fez o seu melhor hoje. 🌟', 'Boa noite, vida. Amanhã a gente continua escrevendo nossa história. 📖', 'Dorme bem, amor. Meu lugar preferido é do seu lado. 🫶']
+  },
+  fertil: {
+    manha: ['Bom dia, linda! Você está radiante hoje. ✨', 'Bom dia, meu amor! Essa sua energia ilumina a casa inteira. 🌞', 'Acordou mais bonita ainda, é isso? 😍', 'Bom dia! Hoje o dia combina com você: cheio de vida. 🌺', 'Você brilha, e eu sou o seu fã número um. 🌟'],
+    tarde: ['Boa tarde, amor! Saudade do seu sorriso. 😘', 'Que tal um encontro só nosso hoje à noite? 💃🕺', 'Pensando em você e ficando bobo, como sempre. 🥰', 'Boa tarde, vida! Você deixa qualquer dia mais gostoso. 🍓', 'Contando as horas para te ver. ⏳💕'],
+    noite: ['Boa noite, meu amor. Hoje eu só quero ficar pertinho de você. 💞', 'A noite é nossa. Vem cá, vem. 🌙', 'Você, eu, um filme e muito carinho. Combinado? 🍿', 'Boa noite, linda. Você é meu lugar favorito. 🫶', 'Terminar o dia abraçado com você é o meu plano perfeito. ✨']
+  },
+  tpm: {
+    manha: ['Bom dia, meu amor. Hoje pode ir devagar, sem cobrança. 🌷', 'Se o dia estiver pesado, me chama. Eu seguro a barra com você. 🤝', 'Bom dia! Você não precisa dar conta de tudo. Eu estou aqui. 💗', 'Tudo bem não estar 100%. Você continua sendo maravilhosa. 🌼', 'Bom dia, vida. Paciência e carinho em dobro para você hoje. 💕'],
+    tarde: ['Boa tarde, amor. Já separei chocolate e colo para mais tarde. 🍫', 'Respira. O que você sente é válido, e eu estou do seu lado. 🫂', 'Pausa para um chá e um carinho? Você merece. 🍵', 'Estou aqui se precisar desabafar, reclamar ou só ficar quietinha. 💜', 'Você é mais forte do que qualquer dia difícil. E não está sozinha. 💪'],
+    noite: ['Boa noite, meu amor. Deixa que hoje eu cuido de tudo. 🛋️', 'Cobertor, série e eu de travesseiro. Topa? 🧸', 'O dia pode ter sido difícil, mas juntos a gente supera tudo. 💪', 'Descansa, vida. Amanhã é um novo dia, e eu continuo aqui. 🌙', 'Hoje é noite de mimo: você escolhe o filme e a comida. 🍕']
+  },
+  menstruacao: {
+    manha: ['Bom dia, meu amor. Hoje o dia é para se cuidar com carinho. 🌷', 'Bom dia, vida! Vai com calma, seu corpo merece gentileza. 💗', 'Qualquer coisa que precisar hoje, é só falar. Estou aqui. 🤗', 'Bom dia, linda. Já deixo o chá e a bolsinha quente no jeito. 🍵', 'Você é guerreira até nos dias mais chatinhos. Te amo! 💕'],
+    tarde: ['Boa tarde, amor. Como você está? Bebe água e descansa um pouquinho. 💧', 'Pensando em você nessa tarde. Estou aqui se precisar de colo. 🤗', 'Chocolate liberado hoje, e eu que trago. 🍫', 'Se a cólica apertar, me chama: massagem e bolsa quente na hora. 💜', 'Sem pressa hoje. Você no seu tempo, eu do seu lado. 🌼'],
+    noite: ['Boa noite, meu amor. Vem descansar que eu cuido de você. 🌙', 'Bolsa quente, cobertor e carinho: o combo da noite está pronto. 🧸', 'Hoje você só relaxa. O resto fica comigo. 💞', 'Que seu corpo descanse e a noite seja bem tranquila. Te amo! ⭐', 'Boa noite, vida. Amanhã vai estar mais leve, e eu sigo aqui. 🫶']
+  }
+};
+var HUMOR = {
+  triste: ['Dias tristes passam. Meu amor por você, não. 💗', 'Vem cá, deixa eu te abraçar até melhorar. 🫂', 'Você não precisa sorrir o tempo todo. Estou com você do mesmo jeito. 🌧️🌈', 'Hoje eu sou seu colo. Pode vir. 🤗'],
+  irritada: ['Pode ficar brava à vontade. Eu fico aqui, quietinho, com chocolate. 🍫', 'Respira fundo, amor. Eu resolvo o que der para você hoje. 🧯', 'Seu espaço é respeitado e seu chá já está a caminho. 🍵', 'Hoje eu só concordo com você. Em tudo. 😌💕'],
+  cansada: ['Você já fez muito. Agora descansa, que eu assumo daqui. 🛋️', 'Cansaço pede carinho. Vem que eu faço massagem. 💆‍♀️', 'Menos tarefas, mais sofá. Ordem do amor. 🧸', 'Dorme um pouquinho, amor. Eu cuido do resto. 😴'],
+  ansiosa: ['Uma coisa de cada vez, amor. Eu seguro sua mão em todas. 🤝', 'Respira comigo: vai dar tudo certo. 🌬️💗', 'Você já superou tanta coisa. Essa também passa. 🌿', 'Estou aqui. Me conta o que está pesando. 💬'],
+  sensivel: ['Sentir muito é uma das coisas mais lindas em você. 🥹', 'Pode chorar, pode rir, pode tudo. Eu fico. 💞', 'Seu coração é enorme, e eu cuido dele com carinho. 💗', 'Hoje é dia de abraço demorado. 🫂']
+};
+var DICAS = {
+  leve: ['Alongamento leve e massagem circular na barriga aliviam.', 'Um chá morno de camomila ou gengibre ajuda a relaxar.', 'Uma caminhada curta melhora a circulação e o humor.', 'Beba bastante água ao longo do dia.'],
+  moderada: ['Bolsa de água quente na barriga por 15 a 20 minutos.', 'Banho morno e roupas confortáveis.', 'Chá de camomila ou gengibre e menos café por hoje.', 'Deitar de lado com as pernas dobradas costuma aliviar.', 'Alimentos leves; evite excesso de sal e ultraprocessados.'],
+  forte: ['Bolsa de água quente, repouso e banho quente ajudam bastante.', 'Massagem suave na lombar e na barriga.', 'O analgésico que ela já costuma usar, conforme a bula ou orientação médica.', 'Chá de camomila, bastante água e nada de esforço hoje.', 'Se a cólica forte se repetir ou atrapalhar a rotina, vale conversar com a ginecologista.']
+};
+var MOODS = [
+  { key: 'feliz', emoji: '😊', nome: 'Feliz' }, { key: 'triste', emoji: '😢', nome: 'Triste' },
+  { key: 'irritada', emoji: '😤', nome: 'Irritada' }, { key: 'cansada', emoji: '😴', nome: 'Cansada' },
+  { key: 'ansiosa', emoji: '😰', nome: 'Ansiosa' }, { key: 'sensivel', emoji: '🥹', nome: 'Sensível' }
+];
+var MOOD_EMOJI = {}; MOODS.forEach(function (m) { MOOD_EMOJI[m.key] = m.emoji; });
+var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+function turno() { var h = new Date().getHours(); return h >= 5 && h < 11 ? 'manha' : h >= 11 && h < 17 ? 'tarde' : 'noite'; }
+
+/* ---------- utilidades ---------- */
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+var toastT;
+function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('show'); }, 2600); }
+function mirror() {            // cópia para o service worker montar as notificações
+  if (!('caches' in window)) return;
+  try { caches.open('ciclo-state').then(function (c) { return c.put('state.json', new Response(JSON.stringify({ cfg: cfg, loc: loc, entries: entries }))); }).catch(function () {}); } catch (e) {}
+}
+function persist() { store.set('entries', entries); store.set('pending', pending); mirror(); }
+
+/* ---------- tela principal ---------- */
+function render() {
+  var t = C.today(), a = C.analyze(entries, t), tr = turno();
+  $('greeting').textContent = (tr === 'manha' ? 'Bom dia' : tr === 'tarde' ? 'Boa tarde' : 'Boa noite') + ', casal 💕';
+  $('sync').textContent = !cfg ? '📱 Dados só neste celular' : syncState === 'err' ? '⚠️ Sem conexão — salvo no celular' : Object.keys(pending).length ? '⏳ Enviando...' : '☁️ Sincronizado';
+
+  // frase do turno, com tom conforme fase do ciclo e humor do dia
+  var fase = C.phase(a, entries, t), hoje = entries[C.key(t)] || {};
+  var ti = ['manha', 'tarde', 'noite'].indexOf(tr), lista;
+  if (hoje.mood && HUMOR[hoje.mood]) lista = HUMOR[hoje.mood]; else lista = FRASES[fase][tr];
+  var idx = hoje.mood && HUMOR[hoje.mood] ? t * 3 + ti : t;
+  $('quoteLabel').textContent = tr === 'manha' ? 'Frase da manhã' : tr === 'tarde' ? 'Frase da tarde' : 'Frase da noite';
+  $('quoteText').textContent = lista[idx % lista.length];
+
+  // cartão 1: menstruação
+  var d = a.last ? a.next - t : null;
+  if (!a.last) { $('c1l').textContent = 'Próxima'; $('c1v').textContent = '--'; $('c1u').textContent = 'registre a última menstruação'; }
+  else if (a.ongoing) { $('c1l').textContent = 'Menstruação'; $('c1v').textContent = 'Dia ' + a.cycleDay; $('c1u').textContent = 'próxima em ' + C.plural(d, 'dia', 'dias'); }
+  else if (a.late > 0) { $('c1l').textContent = 'Atraso'; $('c1v').textContent = '+' + a.late; $('c1u').textContent = a.late === 1 ? 'dia de atraso' : 'dias de atraso'; }
+  else if (d === 0) { $('c1l').textContent = 'Próxima'; $('c1v').textContent = 'Hoje'; $('c1u').textContent = 'é o dia previsto'; }
+  else { $('c1l').textContent = 'Próxima'; $('c1v').textContent = d; $('c1u').textContent = d === 1 ? 'dia para menstruar' : 'dias para menstruar'; }
+
+  // cartão 2: fertilidade
+  var f = a.last ? C.fertileInfo(a, t) : null;
+  if (!f) { $('c2v').textContent = '--'; $('c2u').textContent = 'aguardando registros'; }
+  else if (f.now) { $('c2v').textContent = 'Agora'; $('c2u').textContent = f.isOv ? 'ovulação prevista hoje' : 'período fértil'; }
+  else { $('c2v').textContent = f.days; $('c2u').textContent = f.days === 1 ? 'dia para o fértil' : 'dias para o fértil'; }
+
+  // cartão 3: tempo
+  if (weather) { $('c3e').textContent = weather.rain >= 60 ? '🌧️' : weather.rain >= 30 ? '⛅' : '☀️'; $('c3v').textContent = weather.max + '° / ' + weather.min + '°'; $('c3u').textContent = (weather.rain == null ? '--' : weather.rain) + '% chuva · ' + loc.name; }
+
+  renderCal(a, t);
+  renderTips(a, t, fase, hoje);
+  renderStats(a);
+
+  var b = $('banner'), ios = /iphone|ipad|ipod/i.test(navigator.userAgent), standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (!standalone && location.protocol === 'https:' && !store.get('hideInstall', false)) {
+    b.hidden = false;
+    b.textContent = ios ? '📲 Para instalar: toque em Compartilhar e depois em "Adicionar à Tela de Início". As notificações só funcionam no app instalado.' : '📲 Para instalar: abra o menu do navegador e toque em "Instalar app" ou "Adicionar à tela inicial".';
+  } else b.hidden = true;
+}
+
+function renderCal(a, t) {
+  $('month').textContent = MESES[view.m] + ' ' + view.y;
+  var g = $('grid'); g.textContent = '';
+  var first = new Date(view.y, view.m, 1).getDay(), n = new Date(view.y, view.m + 1, 0).getDate();
+  for (var i = 0; i < first; i++) g.appendChild(el('div', 'cell'));
+  for (var dd = 1; dd <= n; dd++) (function (dd) {
+    var k = view.y + '-' + String(view.m + 1).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+    var dn = C.num(k), e = entries[k], cell = el('button', 'cell'), day = el('div', 'day');
+    var isP = !!(e && e.period), w = a.last ? C.windowOf(a, dn) : null, pred = a.last && !isP && dn >= t && C.inPredicted(a, dn);
+    var fert = w && !isP && dn > (a.last ? a.last.end : 0);
+    if (dn === t) day.classList.add('today');
+    if (dn > t) day.classList.add('future');
+    if (isP) day.classList.add('period'); else if (pred) day.classList.add('pred'); else if (fert) day.classList.add('fertile');
+    day.appendChild(el('span', 'n', dd));
+    var dots = el('div', 'dots');
+    if (isP) dots.appendChild(el('i', 'dot p'));
+    if (fert) dots.appendChild(el('i', w.ov === dn ? 'dot o' : 'dot f'));
+    if (e && e.sex) dots.appendChild(el('i', 'dot s'));
+    day.appendChild(dots);
+    if (e && e.mood) day.appendChild(el('span', 'mood', MOOD_EMOJI[e.mood] || ''));
+    cell.appendChild(day);
+    cell.setAttribute('aria-label', dd + ' de ' + MESES[view.m]);
+    cell.onclick = function () { openDay(k); };
+    g.appendChild(cell);
+  })(dd);
+}
+
+function renderTips(a, t, fase, hoje) {
+  var box = $('tips'), nivel = hoje.cramps && hoje.cramps !== 'nenhuma' ? hoje.cramps : null;
+  if (!nivel && fase !== 'menstruacao' && fase !== 'tpm') { box.hidden = true; return; }
+  box.hidden = false; box.textContent = '';
+  box.appendChild(el('h3', null, nivel ? '💜 Para aliviar a cólica ' + nivel : fase === 'tpm' ? '💜 Cuidados para os dias de TPM' : '💜 Cuidados para esses dias'));
+  var lista = nivel ? DICAS[nivel] : fase === 'tpm'
+    ? ['Sono em dia e menos cafeína ajudam no humor.', 'Atividade física leve reduz inchaço e irritação.', 'Prefira refeições leves e beba bastante água.', 'Paciência e carinho em dobro. 💕']
+    : DICAS.leve;
+  var ul = el('ul'); lista.forEach(function (x) { ul.appendChild(el('li', null, x)); }); box.appendChild(ul);
+}
+
+function renderStats(a) {
+  var box = $('stats'); box.textContent = '';
+  box.appendChild(el('h3', null, '📊 O ciclo dela'));
+  var row = el('div', 'stat-row');
+  function stat(v, l) { var s = el('div', 'stat'); s.appendChild(el('b', null, v)); s.appendChild(el('small', null, l)); row.appendChild(s); }
+  stat(a.cycleLen + (a.spread ? ' ±' + a.spread : ''), 'dias de ciclo');
+  stat(a.periodLen, 'dias de menstruação');
+  stat(a.cycleDay && a.cycleDay <= 90 ? a.cycleDay + 'º' : '--', 'dia do ciclo');
+  box.appendChild(row);
+  var msg;
+  if (!a.last) msg = 'Marque no calendário os dias da última menstruação. Enquanto não houver registros suficientes, o app usa a média padrão (ciclo de 28 dias, 5 de menstruação).';
+  else if (!a.cyclesUsed) msg = 'Ainda usando o ciclo padrão de 28 dias. A partir da segunda menstruação registrada, o app passa a calcular o ciclo real dela.';
+  else msg = 'Calculado com ' + (a.cyclesUsed === 1 ? 'o último ciclo registrado' : 'os últimos ' + a.cyclesUsed + ' ciclos registrados') + ', dando mais peso aos recentes. A previsão se ajusta a cada novo registro.';
+  box.appendChild(el('p', 'note', msg));
+}
+
+/* ---------- registro do dia ---------- */
+var draft, draftKey;
+function openDay(k) {
+  if (C.num(k) > C.today()) { toast('Esse dia ainda não chegou 💕'); return; }
+  draftKey = k;
+  var s = entries[k] || {};
+  draft = { period: !!s.period, flow: s.flow || null, cramps: s.cramps || null, mood: s.mood || null, sex: !!s.sex, note: s.note || '' };
+  drawDay(); $('dayOv').classList.add('open');
+}
+function drawDay() {
+  var sh = $('daySheet'), keep = sh.scrollTop; sh.textContent = '';
+  var p = draftKey.split('-'), date = new Date(+p[0], +p[1] - 1, +p[2]);
+  sh.appendChild(el('div', 'handle'));
+  var titulo = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  sh.appendChild(el('div', 's-title', titulo.charAt(0).toUpperCase() + titulo.slice(1)));
+  sh.appendChild(el('div', 's-sub', 'Conte como foi o dia dela 💗'));
+
+  function simNao(titulo, campo) {
+    sh.appendChild(el('div', 'sec', titulo));
+    var r = el('div', 'row');
+    [['Sim', true], ['Não', false]].forEach(function (o) {
+      var b = el('button', 'toggle' + (draft[campo] === o[1] ? ' on' : ''), o[0]);
+      b.onclick = function () { draft[campo] = o[1]; if (campo === 'period' && !o[1]) draft.flow = null; drawDay(); };
+      r.appendChild(b);
+    });
+    sh.appendChild(r);
+  }
+  function opcoes(titulo, campo, lista) {
+    sh.appendChild(el('div', 'sec', titulo));
+    var r = el('div', 'row tight');
+    lista.forEach(function (v) {
+      var b = el('button', 'opt' + (draft[campo] === v ? ' on' : ''), v.charAt(0).toUpperCase() + v.slice(1));
+      b.onclick = function () { draft[campo] = draft[campo] === v ? null : v; if (campo === 'flow' && draft.flow) draft.period = true; drawDay(); };
+      r.appendChild(b);
+    });
+    sh.appendChild(r);
+  }
+  simNao('Teve menstruação?', 'period');
+  opcoes('Fluxo', 'flow', ['leve', 'moderado', 'intenso']);
+  opcoes('Cólica', 'cramps', ['nenhuma', 'leve', 'moderada', 'forte']);
+  if (draft.cramps && draft.cramps !== 'nenhuma') {
+    var tip = el('div', 'tip'); tip.appendChild(document.createTextNode('💜 Sugestões para aliviar:'));
+    var ul = el('ul'); DICAS[draft.cramps].forEach(function (x) { ul.appendChild(el('li', null, x)); }); tip.appendChild(ul); sh.appendChild(tip);
+  }
+  sh.appendChild(el('div', 'sec', 'Humor'));
+  var r = el('div', 'row tight');
+  MOODS.forEach(function (m) {
+    var b = el('button', 'moodb' + (draft.mood === m.key ? ' on' : ''), m.emoji);
+    b.appendChild(el('small', null, m.nome)); b.setAttribute('aria-label', m.nome);
+    b.onclick = function () { draft.mood = draft.mood === m.key ? null : m.key; drawDay(); };
+    r.appendChild(b);
+  });
+  sh.appendChild(r);
+  simNao('Teve relação sexual?', 'sex');
+  sh.appendChild(el('div', 'sec', 'Observações'));
+  var ta = el('textarea'); ta.value = draft.note; ta.placeholder = 'Opcional'; ta.maxLength = 300;
+  ta.oninput = function () { draft.note = ta.value; }; sh.appendChild(ta);
+
+  var save = el('button', 'save', 'Salvar registro'); save.onclick = saveDay; sh.appendChild(save);
+  if (entries[draftKey]) { var del = el('button', 'ghost', 'Apagar registro deste dia'); del.onclick = function () { setEntry(draftKey, null); closeAll(); toast('Registro apagado'); }; sh.appendChild(del); }
+  var cancel = el('button', 'ghost', 'Cancelar'); cancel.onclick = closeAll; sh.appendChild(cancel);
+  sh.scrollTop = keep;
+}
+function saveDay() {
+  var vazio = !draft.period && !draft.flow && !draft.cramps && !draft.mood && !draft.sex && !draft.note.trim();
+  var e = vazio ? null : { period: draft.period, flow: draft.flow, cramps: draft.cramps, mood: draft.mood, sex: draft.sex, note: draft.note.trim() };
+  setEntry(draftKey, e); closeAll(); toast(vazio ? 'Nada para salvar' : 'Registro salvo 💕');
+}
+function setEntry(k, e) {
+  if (e) entries[k] = e; else delete entries[k];
+  if (cfg) pending[k] = 1;
+  persist(); render(); flush();
+}
+function closeAll() { $('dayOv').classList.remove('open'); $('cfgOv').classList.remove('open'); }
+
+/* ---------- sincronização (Planilha Google via Apps Script) ---------- */
+function apiGet(q) { return fetch(cfg.url + '?k=' + encodeURIComponent(cfg.key) + '&' + q + '&t=' + Date.now()).then(function (r) { return r.json(); }); }
+function apiPost(body) {
+  body.k = cfg.key;
+  return fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }).then(function (r) { return r.json(); });
+}
+var flushing = false;
+function flush() {
+  if (!cfg || flushing) return Promise.resolve();
+  var keys = Object.keys(pending); if (!keys.length) return Promise.resolve();
+  flushing = true;
+  var items = keys.map(function (k) { return { date: k, entry: entries[k] || null }; });
+  return apiPost({ a: 'save', items: items }).then(function (r) {
+    if (!r.ok) throw new Error(r.error || 'erro');
+    keys.forEach(function (k) { delete pending[k]; }); syncState = 'ok'; persist();
+  }).catch(function () { syncState = 'err'; }).then(function () { flushing = false; render(); });
+}
+function pull() {
+  if (!cfg) return Promise.resolve();
+  return flush().then(function () { return apiGet('a=all'); }).then(function (r) {
+    if (!r.ok) throw new Error(r.error || 'erro');
+    var novo = r.entries || {};
+    Object.keys(pending).forEach(function (k) { if (entries[k]) novo[k] = entries[k]; else delete novo[k]; });
+    entries = novo; if (r.vapid) { vapid = r.vapid; store.set('vapid', vapid); }
+    syncState = 'ok'; persist(); render();
+  }).catch(function () { syncState = 'err'; render(); });
+}
+
+/* ---------- notificações ---------- */
+function b64ToBytes(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var raw = atob(s), out = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; }
+function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function checkPush() {
+  if (!pushSupported()) return Promise.resolve(false);
+  return navigator.serviceWorker.getRegistration().then(function (reg) { return reg ? reg.pushManager.getSubscription() : null; }).then(function (s) { pushOn = !!s; return pushOn; }).catch(function () { return false; });
+}
+function enablePush() {
+  if (!cfg) { toast('Conecte a planilha primeiro'); return; }
+  if (!pushSupported()) { toast('Instale o app na tela inicial para ativar as notificações'); return; }
+  if (!vapid) { toast('Sincronizando... tente de novo em instantes'); pull(); return; }
+  Notification.requestPermission().then(function (perm) {
+    if (perm !== 'granted') throw new Error('Permissão negada nas configurações do celular');
+    return navigator.serviceWorker.ready;
+  }).then(function (reg) {
+    return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(vapid) });
+  }).then(function (sub) {
+    var nome = /iphone|ipad/i.test(navigator.userAgent) ? 'iPhone' : /android/i.test(navigator.userAgent) ? 'Android' : 'Computador';
+    return apiPost({ a: 'sub', sub: sub.toJSON(), device: nome, site: location.origin + location.pathname });
+  }).then(function (r) {
+    if (!r.ok) throw new Error(r.error || 'erro');
+    pushOn = true; toast('Notificações ativadas 🔔'); openCfg();
+  }).catch(function (e) { toast('Não deu: ' + e.message); });
+}
+function testPush() { apiPost({ a: 'test' }).then(function (r) { toast(r.ok ? 'Teste enviado para ' + C.plural(r.sent, 'aparelho', 'aparelhos') : 'Erro: ' + r.error); }).catch(function () { toast('Sem conexão'); }); }
+
+/* ---------- configurações ---------- */
+function codigo() { return 'PC1.' + btoa(unescape(encodeURIComponent(JSON.stringify({ u: cfg.url, k: cfg.key })))); }
+function openCfg() {
+  var sh = $('cfgSheet'); sh.textContent = '';
+  sh.appendChild(el('div', 'handle'));
+  sh.appendChild(el('div', 's-title', 'Configurações'));
+  sh.appendChild(el('div', 's-sub', 'Sincronização, notificações e previsão do tempo'));
+
+  sh.appendChild(el('div', 'sec', '☁️ Sincronização do casal'));
+  if (cfg) {
+    sh.appendChild(el('span', 'pill ok', 'Conectado à planilha'));
+    sh.appendChild(el('p', 'help', 'Para conectar o outro celular, copie o código e cole nesta mesma tela no app dele(a).'));
+    var cp = el('button', 'btn2', 'Copiar código de conexão');
+    cp.onclick = function () { var c = codigo(); (navigator.clipboard ? navigator.clipboard.writeText(c) : Promise.reject()).then(function () { toast('Código copiado'); }).catch(function () { window.prompt('Copie o código:', c); }); };
+    sh.appendChild(cp);
+    var sy = el('button', 'btn2', 'Sincronizar agora'); sy.onclick = function () { pull().then(function () { toast(syncState === 'ok' ? 'Sincronizado' : 'Sem conexão'); }); }; sh.appendChild(sy);
+    var off = el('button', 'ghost', 'Desconectar este celular');
+    off.onclick = function () { if (confirm('Desconectar? Os registros continuam na planilha.')) { cfg = null; pending = {}; store.set('cfg', null); persist(); render(); openCfg(); } };
+    sh.appendChild(off);
+  } else {
+    sh.appendChild(el('span', 'pill', 'Dados só neste celular'));
+    sh.appendChild(el('p', 'help', 'Cole o código de conexão recebido do outro celular, ou o link do Apps Script e a senha.'));
+    var i1 = el('input'); i1.type = 'text'; i1.placeholder = 'Código (PC1...) ou link do Apps Script'; i1.autocapitalize = 'off'; i1.style.marginTop = '8px'; sh.appendChild(i1);
+    var i2 = el('input'); i2.type = 'password'; i2.placeholder = 'Senha (se usou o link)'; i2.style.marginTop = '8px'; sh.appendChild(i2);
+    var go = el('button', 'btn2', 'Conectar');
+    go.onclick = function () {
+      var v = i1.value.trim(), novo;
+      try {
+        if (v.indexOf('PC1.') === 0) { var o = JSON.parse(decodeURIComponent(escape(atob(v.slice(4))))); novo = { url: o.u, key: o.k }; }
+        else novo = { url: v, key: i2.value.trim() };
+        if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(novo.url) || !novo.key) throw 0;
+      } catch (e) { toast('Código ou link inválido'); return; }
+      var locais = entries; cfg = novo; go.disabled = true; go.textContent = 'Conectando...';
+      apiGet('a=all').then(function (r) {
+        if (!r.ok) throw new Error(r.error);
+        store.set('cfg', cfg);
+        Object.keys(locais).forEach(function (k) { if (!(r.entries || {})[k]) pending[k] = 1; });   // envia o que já existia aqui
+        return pull();
+      }).then(function () { toast('Conectado 💕'); openCfg(); })
+        .catch(function (e) { cfg = null; go.disabled = false; go.textContent = 'Conectar'; toast(e && e.message === 'senha' ? 'Senha incorreta' : 'Não foi possível conectar'); });
+    };
+    sh.appendChild(go);
+  }
+
+  sh.appendChild(el('div', 'sec', '🔔 Notificações'));
+  sh.appendChild(el('p', 'help', '7h: previsão do tempo (máxima, mínima e chance de chuva). 20h: dias para a menstruação e para o período fértil.'));
+  var st = el('span', 'pill' + (pushOn ? ' ok' : ''), pushOn ? 'Ativadas neste celular' : 'Desativadas neste celular'); st.style.marginTop = '8px'; sh.appendChild(st);
+  if (!pushOn) { var on = el('button', 'btn2', 'Ativar notificações neste celular'); on.onclick = enablePush; sh.appendChild(on); }
+  else { var te = el('button', 'btn2', 'Enviar notificação de teste'); te.onclick = testPush; sh.appendChild(te); }
+  if (!pushSupported()) sh.appendChild(el('p', 'help', 'Neste navegador as notificações não estão disponíveis. No iPhone, instale o app pela opção "Adicionar à Tela de Início" (iOS 16.4 ou mais novo) e abra por lá.'));
+
+  sh.appendChild(el('div', 'sec', '☀️ Previsão do tempo'));
+  sh.appendChild(el('span', 'pill', 'Local: ' + loc.name));
+  var gl = el('button', 'btn2', 'Usar a localização deste celular');
+  gl.onclick = function () {
+    if (!navigator.geolocation) { toast('Localização indisponível'); return; }
+    navigator.geolocation.getCurrentPosition(function (p) { loc = { lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), name: 'Sua região' }; store.set('loc', loc); mirror(); loadWeather(); openCfg(); toast('Local atualizado'); }, function () { toast('Não foi possível obter a localização'); });
+  };
+  sh.appendChild(gl);
+  if (loc.name !== 'Curitiba') { var cw = el('button', 'ghost', 'Voltar para Curitiba'); cw.onclick = function () { loc = { lat: -25.43, lon: -49.27, name: 'Curitiba' }; store.set('loc', loc); mirror(); loadWeather(); openCfg(); }; sh.appendChild(cw); }
+
+  var close = el('button', 'save', 'Fechar'); close.onclick = closeAll; sh.appendChild(close);
+  $('cfgOv').classList.add('open');
+}
+
+function loadWeather() {
+  var c = store.get('wx', null), hoje = C.key(C.today());
+  if (c && c.day === hoje && c.lat === loc.lat) { weather = c.w; render(); }
+  C.fetchWeather(loc.lat, loc.lon).then(function (w) { if (w) { weather = w; store.set('wx', { day: hoje, lat: loc.lat, w: w }); render(); } else if (!weather) $('c3u').textContent = 'indisponível'; })
+    .catch(function () { if (!weather) $('c3u').textContent = 'sem conexão'; });
+}
+
+/* ---------- eventos ---------- */
+$('prev').onclick = function () { view.m--; if (view.m < 0) { view.m = 11; view.y--; } render(); };
+$('next').onclick = function () { view.m++; if (view.m > 11) { view.m = 0; view.y++; } render(); };
+$('fab').onclick = function () { openDay(C.key(C.today())); };
+$('gear').onclick = function () { checkPush().then(openCfg); };
+$('banner').onclick = function () { store.set('hideInstall', true); render(); };
+['dayOv', 'cfgOv'].forEach(function (id) { $(id).addEventListener('click', function (e) { if (e.target === $(id)) closeAll(); }); });
+document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pull(); loadWeather(); } });
+window.addEventListener('online', function () { pull(); });
+setInterval(render, 60000);     // troca a frase quando muda o turno
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
+render(); mirror(); loadWeather(); pull(); checkPush();
+})();
+</script>
+</body>
+</html>
