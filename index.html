@@ -77,6 +77,38 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .stat small{font-size:10px;color:#9ca3af;font-weight:600}
 .note{font-size:11px;color:#6b7280;margin:10px 0 0;line-height:16px}
 .banner{margin:18px 20px 0;background:#fffbeb;border-radius:16px;padding:12px 14px;font-size:12px;color:#92400e;font-weight:600;line-height:17px}
+.day .bell{position:absolute;top:1px;left:2px;font-size:9px}
+.block.water{background:#eff6ff}
+.block.water h3{display:flex;justify-content:space-between;align-items:center}
+.linkb{font-size:12px;font-weight:700;color:#2563eb}
+.wrow{background:#fff;border-radius:14px;padding:10px 12px;margin-top:8px}
+.wtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+.wtop b{font-weight:800;color:#1f2937}
+.wtop .you{font-size:10px;font-weight:700;color:#2563eb;background:#dbeafe;border-radius:99px;padding:1px 7px;margin-left:4px}
+.wnum{font-size:12px;color:#6b7280;font-weight:600;white-space:nowrap}
+.bar{height:8px;background:#e5e7eb;border-radius:99px;margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;background:#60a5fa;border-radius:99px;transition:width .2s}
+.bar i.full{background:#22c55e}
+.wbtns{display:flex;gap:8px;margin-top:9px}
+.wb{flex:1;padding:9px 0;border-radius:12px;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:700;font-size:14px;background:#fff}
+.wb.plus{background:#3b82f6;border-color:#3b82f6;color:#fff}
+.wb:disabled{opacity:.4}
+.sheet .wrow{background:#eff6ff}
+.wdone{font-size:11px;color:#16a34a;font-weight:700;margin-top:5px}
+.block.rem{background:#fefce8}
+.rem-item{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;padding:8px 0;border-top:1px solid #fef08a;font-size:13px}
+.rem-item:first-of-type{border-top:0}
+.rem-item .when{font-size:11px;font-weight:800;color:#a16207;min-width:74px}
+.rem-item.past{opacity:.45}
+.lrow{display:flex;gap:8px;margin-top:8px;align-items:center}
+.lrow input[type=time]{width:104px;flex:none;border:1px solid #e5e7eb;border-radius:12px;padding:9px 6px;font:inherit;font-size:14px;color:#374151;background:#fff}
+.lrow input[type=text]{flex:1;min-width:0}
+.lx{flex:none;width:36px;height:40px;border-radius:12px;border:1px solid #e5e7eb;color:#9ca3af;font-size:16px}
+.addl{margin-top:10px;width:100%;padding:11px 0;border-radius:12px;border:1.5px dashed #f9a8d4;color:#db2777;font-weight:700;font-size:13px}
+.stepper{display:flex;align-items:center;gap:12px;margin-top:10px}
+.stepper .wb{flex:none;width:64px}
+.stepper b{flex:1;text-align:center;font-size:22px;font-weight:800}
+.chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .foot{font-size:10px;color:#9ca3af;text-align:center;margin:22px 30px 0;line-height:15px}
 
 /* Botão flutuante */
@@ -139,6 +171,8 @@ textarea{resize:none;height:64px}
   </div>
 
   <div class="banner" id="banner" hidden></div>
+  <div class="block water" id="water"></div>
+  <div class="block rem" id="rem" hidden></div>
 
   <div class="cal">
     <div class="cal-head">
@@ -351,6 +385,11 @@ var pending = store.get('pending', {});
 var cfg = store.get('cfg', null);                 // {url, key}
 var loc = store.get('loc', { lat: -25.43, lon: -49.27, name: 'Curitiba' });
 var vapid = store.get('vapid', null);
+var water = store.get('water', {});                 // { 'aaaa-mm-dd': { 0: ml, 1: ml } }
+var pendingWater = store.get('pendingWater', {});   // { 'aaaa-mm-dd|p': ml }
+var people = store.get('people', [{ name: 'Alberto', goal: 2000 }, { name: 'Marjory', goal: 2000 }]);
+var me = store.get('me', null);                     // 0 ou 1: quem usa este celular
+var pendingGoal = store.get('pendingGoal', null);
 var weather = null, syncState = '', pushOn = false;
 var now0 = new Date(), view = { y: now0.getFullYear(), m: now0.getMonth() };
 
@@ -407,7 +446,7 @@ function mirror() {            // cópia para o service worker montar as notific
   if (!('caches' in window)) return;
   try { caches.open('ciclo-state').then(function (c) { return c.put('state.json', new Response(JSON.stringify({ cfg: cfg, loc: loc, entries: entries }))); }).catch(function () {}); } catch (e) {}
 }
-function persist() { store.set('entries', entries); store.set('pending', pending); mirror(); }
+function persist() { store.set('entries', entries); store.set('pending', pending); store.set('pendingWater', pendingWater); mirror(); }
 
 /* ---------- tela principal ---------- */
 function render() {
@@ -440,6 +479,8 @@ function render() {
   // cartão 3: tempo
   if (weather) { $('c3e').textContent = weather.rain >= 60 ? '🌧️' : weather.rain >= 30 ? '⛅' : '☀️'; $('c3v').textContent = weather.max + '° / ' + weather.min + '°'; $('c3u').textContent = (weather.rain == null ? '--' : weather.rain) + '% chuva · ' + loc.name; }
 
+  renderWater(t);
+  renderRem(t);
   renderCal(a, t);
   renderTips(a, t, fase, hoje);
   renderStats(a);
@@ -471,6 +512,7 @@ function renderCal(a, t) {
     if (e && e.sex) dots.appendChild(el('i', 'dot s'));
     day.appendChild(dots);
     if (e && e.mood) day.appendChild(el('span', 'mood', MOOD_EMOJI[e.mood] || ''));
+    if (remindersOf(e).length) day.appendChild(el('span', 'bell', '🔔'));
     cell.appendChild(day);
     cell.setAttribute('aria-label', dd + ' de ' + MESES[view.m]);
     cell.onclick = function () { openDay(k); };
@@ -505,14 +547,163 @@ function renderStats(a) {
   box.appendChild(el('p', 'note', msg));
 }
 
+/* ---------- água ---------- */
+function fmtMl(n) { return Number(n || 0).toLocaleString('pt-BR') + ' ml'; }
+function waterVal(d, p) { var w = water[d]; return (w && w[p]) || 0; }
+var flushT;
+function scheduleFlush() { clearTimeout(flushT); flushT = setTimeout(function () { flush(); }, 900); }
+function setWater(d, p, ml) {
+  ml = Math.max(0, Math.min(10000, ml));
+  (water[d] = water[d] || {})[p] = ml;
+  if (cfg) pendingWater[d + '|' + p] = ml;
+  store.set('water', water); store.set('pendingWater', pendingWater);
+  scheduleFlush();
+}
+function choosePerson(box) {
+  box.appendChild(el('p', 'note', 'Quem usa este celular? Assim cada um registra a própria água e vê a do outro.'));
+  var r = el('div', 'row'); r.style.marginTop = '8px';
+  people.forEach(function (pp, i) {
+    var b = el('button', 'toggle' + (me === i ? ' on' : ''), pp.name);
+    b.onclick = function () {
+      me = i; store.set('me', me); render();
+      if ($('cfgOv').classList.contains('open')) openCfg();
+      if ($('dayOv').classList.contains('open')) drawDay();
+      toast('Este celular é de ' + pp.name);
+    };
+    r.appendChild(b);
+  });
+  box.appendChild(r);
+}
+function waterRows(box, d, onChange) {
+  if (me == null) { choosePerson(box); return; }
+  [me, 1 - me].forEach(function (p) {
+    var v = waterVal(d, p), goal = people[p].goal, row = el('div', 'wrow');
+    var top = el('div', 'wtop'), nm = el('div');
+    nm.appendChild(el('b', null, people[p].name));
+    if (p === me) nm.appendChild(el('span', 'you', 'você'));
+    top.appendChild(nm); top.appendChild(el('span', 'wnum', fmtMl(v) + ' / ' + fmtMl(goal)));
+    row.appendChild(top);
+    var bar = el('div', 'bar'), fill = el('i', v >= goal ? 'full' : null);
+    fill.style.width = Math.min(100, Math.round(v / goal * 100)) + '%';
+    bar.appendChild(fill); row.appendChild(bar);
+    if (v >= goal) row.appendChild(el('div', 'wdone', '🎉 Meta batida!'));
+    if (p === me) {
+      var bt = el('div', 'wbtns');
+      var mn = el('button', 'wb', '− 100 ml'); mn.disabled = v <= 0;
+      mn.onclick = function () { setWater(d, p, v - 100); onChange(); };
+      var pl = el('button', 'wb plus', '💧 + 100 ml');
+      pl.onclick = function () { setWater(d, p, v + 100); onChange(); };
+      bt.appendChild(mn); bt.appendChild(pl); row.appendChild(bt);
+    }
+    box.appendChild(row);
+  });
+}
+function renderWater(t) {
+  var box = $('water'); box.textContent = '';
+  var h = el('h3'); h.appendChild(document.createTextNode('💧 Água de hoje'));
+  if (me != null) { var lk = el('button', 'linkb', 'Minha meta ✏️'); lk.onclick = openGoal; h.appendChild(lk); }
+  box.appendChild(h);
+  waterRows(box, C.key(t), render);
+  if (!cfg && me != null) box.appendChild(el('p', 'note', 'Conecte a planilha em ⚙︎ para ver a água do outro celular.'));
+}
+var goalT;
+function setGoal(ml) {
+  ml = Math.max(500, Math.min(6000, ml));
+  people[me].goal = ml; store.set('people', people);
+  if (cfg) { pendingGoal = ml; store.set('pendingGoal', ml); }
+  clearTimeout(goalT); goalT = setTimeout(sendGoal, 900);
+}
+function sendGoal() {
+  if (!cfg || pendingGoal == null || me == null) return Promise.resolve();
+  var sent = pendingGoal;
+  return apiPost({ a: 'person', p: me, goal: sent }).then(function (r) {
+    if (!r.ok) throw 0;
+    if (pendingGoal === sent) { pendingGoal = null; store.set('pendingGoal', null); }
+  }).catch(function () {});
+}
+function openGoal() {
+  var sh = $('cfgSheet'); sh.textContent = '';
+  sh.appendChild(el('div', 'handle'));
+  sh.appendChild(el('div', 's-title', 'Minha meta de água'));
+  sh.appendChild(el('div', 's-sub', people[me].name + ', quanto você quer beber por dia?'));
+  var g = people[me].goal, st = el('div', 'stepper');
+  var mn = el('button', 'wb', '− 100'), pl = el('button', 'wb plus', '+ 100');
+  mn.onclick = function () { setGoal(people[me].goal - 100); openGoal(); render(); };
+  pl.onclick = function () { setGoal(people[me].goal + 100); openGoal(); render(); };
+  st.appendChild(mn); st.appendChild(el('b', null, fmtMl(g))); st.appendChild(pl); sh.appendChild(st);
+  var ch = el('div', 'chips');
+  [1500, 2000, 2500, 3000, 3500].forEach(function (v) {
+    var b = el('button', 'opt' + (g === v ? ' on' : ''), (v / 1000).toLocaleString('pt-BR') + ' L');
+    b.onclick = function () { setGoal(v); openGoal(); render(); };
+    ch.appendChild(b);
+  });
+  sh.appendChild(ch);
+  var close = el('button', 'save', 'Pronto'); close.onclick = closeAll; sh.appendChild(close);
+  $('cfgOv').classList.add('open');
+}
+
+/* ---------- lembretes ---------- */
+function remindersOf(e) {
+  if (!e) return [];
+  if (e.reminders) return e.reminders;
+  return e.note ? [{ t: '', txt: e.note }] : [];     // observação antiga vira lembrete
+}
+function renderRem(t) {
+  var box = $('rem'), itens = [], agora = new Date();
+  var hm = String(agora.getHours()).padStart(2, '0') + ':' + String(agora.getMinutes()).padStart(2, '0');
+  for (var d = t; d <= t + 7; d++) {
+    var k = C.key(d);
+    remindersOf(entries[k]).slice().sort(function (a, b) { return (a.t || '99') < (b.t || '99') ? -1 : 1; })
+      .forEach(function (r) { itens.push({ d: d, k: k, r: r }); });
+  }
+  if (!itens.length) { box.hidden = true; return; }
+  box.hidden = false; box.textContent = '';
+  box.appendChild(el('h3', null, '📌 Próximos lembretes'));
+  itens.slice(0, 6).forEach(function (it) {
+    var dia = it.d === t ? 'Hoje' : it.d === t + 1 ? 'Amanhã'
+      : new Date(it.d * 86400000).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+    var b = el('button', 'rem-item' + (it.d === t && it.r.t && it.r.t < hm ? ' past' : ''));
+    b.appendChild(el('span', 'when', dia + (it.r.t ? ' ' + it.r.t : '')));
+    b.appendChild(el('span', null, it.r.txt));
+    b.onclick = function () { openDay(it.k); };
+    box.appendChild(b);
+  });
+  if (itens.length > 6) box.appendChild(el('p', 'note', '+ ' + (itens.length - 6) + ' no calendário'));
+}
+
 /* ---------- registro do dia ---------- */
-var draft, draftKey;
+var draft, draftKey, draftFuture;
 function openDay(k) {
-  if (C.num(k) > C.today()) { toast('Esse dia ainda não chegou 💕'); return; }
-  draftKey = k;
+  draftKey = k; draftFuture = C.num(k) > C.today();
   var s = entries[k] || {};
-  draft = { period: !!s.period, flow: s.flow || null, cramps: s.cramps || null, mood: s.mood || null, sex: !!s.sex, note: s.note || '' };
+  draft = {
+    period: !!s.period, flow: s.flow || null, cramps: s.cramps || null, mood: s.mood || null, sex: !!s.sex,
+    reminders: remindersOf(s).map(function (r) { return { t: r.t || '', txt: r.txt || '' }; })
+  };
+  $('daySheet').scrollTop = 0;
   drawDay(); $('dayOv').classList.add('open');
+}
+function drawReminders(sh) {
+  sh.appendChild(el('div', 'sec', 'Lembretes 🔔'));
+  sh.appendChild(el('p', 'help', 'Com horário, chega notificação nos dois celulares na hora marcada. Sem horário, fica só anotado.'));
+  draft.reminders.forEach(function (r, i) {
+    var row = el('div', 'lrow');
+    var ti = el('input'); ti.type = 'time'; ti.value = r.t; ti.setAttribute('aria-label', 'Horário');
+    ti.onchange = ti.oninput = function () { r.t = ti.value; };
+    var tx = el('input'); tx.type = 'text'; tx.value = r.txt; tx.placeholder = 'Ex.: tomar remédio'; tx.maxLength = 120;
+    tx.oninput = function () { r.txt = tx.value; };
+    var x = el('button', 'lx', '✕'); x.setAttribute('aria-label', 'Remover lembrete');
+    x.onclick = function () { draft.reminders.splice(i, 1); drawDay(); };
+    row.appendChild(ti); row.appendChild(tx); row.appendChild(x); sh.appendChild(row);
+  });
+  if (draft.reminders.length < 10) {
+    var add = el('button', 'addl', '+ Adicionar lembrete');
+    add.onclick = function () {
+      draft.reminders.push({ t: '', txt: '' }); drawDay();
+      var ins = $('daySheet').querySelectorAll('.lrow input[type=text]'); if (ins.length) ins[ins.length - 1].focus();
+    };
+    sh.appendChild(add);
+  }
 }
 function drawDay() {
   var sh = $('daySheet'), keep = sh.scrollTop; sh.textContent = '';
@@ -520,7 +711,7 @@ function drawDay() {
   sh.appendChild(el('div', 'handle'));
   var titulo = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   sh.appendChild(el('div', 's-title', titulo.charAt(0).toUpperCase() + titulo.slice(1)));
-  sh.appendChild(el('div', 's-sub', 'Conte como foi o dia dela 💗'));
+  sh.appendChild(el('div', 's-sub', draftFuture ? 'Dia futuro: aqui dá para agendar lembretes 🔔' : 'Conte como foi o dia dela 💗'));
 
   function simNao(titulo, campo) {
     sh.appendChild(el('div', 'sec', titulo));
@@ -542,36 +733,49 @@ function drawDay() {
     });
     sh.appendChild(r);
   }
-  simNao('Teve menstruação?', 'period');
-  opcoes('Fluxo', 'flow', ['leve', 'moderado', 'intenso']);
-  opcoes('Cólica', 'cramps', ['nenhuma', 'leve', 'moderada', 'forte']);
-  if (draft.cramps && draft.cramps !== 'nenhuma') {
-    var tip = el('div', 'tip'); tip.appendChild(document.createTextNode('💜 Sugestões para aliviar:'));
-    var ul = el('ul'); DICAS[draft.cramps].forEach(function (x) { ul.appendChild(el('li', null, x)); }); tip.appendChild(ul); sh.appendChild(tip);
+  if (!draftFuture) {
+    simNao('Teve menstruação?', 'period');
+    opcoes('Fluxo', 'flow', ['leve', 'moderado', 'intenso']);
+    opcoes('Cólica', 'cramps', ['nenhuma', 'leve', 'moderada', 'forte']);
+    if (draft.cramps && draft.cramps !== 'nenhuma') {
+      var tip = el('div', 'tip'); tip.appendChild(document.createTextNode('💜 Sugestões para aliviar:'));
+      var ul = el('ul'); DICAS[draft.cramps].forEach(function (x) { ul.appendChild(el('li', null, x)); }); tip.appendChild(ul); sh.appendChild(tip);
+    }
+    sh.appendChild(el('div', 'sec', 'Humor'));
+    var r = el('div', 'row tight');
+    MOODS.forEach(function (m) {
+      var b = el('button', 'moodb' + (draft.mood === m.key ? ' on' : ''), m.emoji);
+      b.appendChild(el('small', null, m.nome)); b.setAttribute('aria-label', m.nome);
+      b.onclick = function () { draft.mood = draft.mood === m.key ? null : m.key; drawDay(); };
+      r.appendChild(b);
+    });
+    sh.appendChild(r);
+    simNao('Teve relação sexual?', 'sex');
+    sh.appendChild(el('div', 'sec', 'Água 💧'));
+    sh.appendChild(el('p', 'help', 'A água é salva na hora, sem precisar tocar em Salvar.'));
+    waterRows(sh, draftKey, function () { drawDay(); render(); });
   }
-  sh.appendChild(el('div', 'sec', 'Humor'));
-  var r = el('div', 'row tight');
-  MOODS.forEach(function (m) {
-    var b = el('button', 'moodb' + (draft.mood === m.key ? ' on' : ''), m.emoji);
-    b.appendChild(el('small', null, m.nome)); b.setAttribute('aria-label', m.nome);
-    b.onclick = function () { draft.mood = draft.mood === m.key ? null : m.key; drawDay(); };
-    r.appendChild(b);
-  });
-  sh.appendChild(r);
-  simNao('Teve relação sexual?', 'sex');
-  sh.appendChild(el('div', 'sec', 'Observações'));
-  var ta = el('textarea'); ta.value = draft.note; ta.placeholder = 'Opcional'; ta.maxLength = 300;
-  ta.oninput = function () { draft.note = ta.value; }; sh.appendChild(ta);
+  drawReminders(sh);
 
-  var save = el('button', 'save', 'Salvar registro'); save.onclick = saveDay; sh.appendChild(save);
-  if (entries[draftKey]) { var del = el('button', 'ghost', 'Apagar registro deste dia'); del.onclick = function () { setEntry(draftKey, null); closeAll(); toast('Registro apagado'); }; sh.appendChild(del); }
+  var save = el('button', 'save', draftFuture ? 'Salvar lembretes' : 'Salvar registro'); save.onclick = saveDay; sh.appendChild(save);
+  if (entries[draftKey]) {
+    var del = el('button', 'ghost', draftFuture ? 'Apagar lembretes deste dia' : 'Apagar registro deste dia');
+    del.onclick = function () { setEntry(draftKey, null); closeAll(); toast('Apagado'); }; sh.appendChild(del);
+  }
   var cancel = el('button', 'ghost', 'Cancelar'); cancel.onclick = closeAll; sh.appendChild(cancel);
   sh.scrollTop = keep;
 }
 function saveDay() {
-  var vazio = !draft.period && !draft.flow && !draft.cramps && !draft.mood && !draft.sex && !draft.note.trim();
-  var e = vazio ? null : { period: draft.period, flow: draft.flow, cramps: draft.cramps, mood: draft.mood, sex: draft.sex, note: draft.note.trim() };
-  setEntry(draftKey, e); closeAll(); toast(vazio ? 'Nada para salvar' : 'Registro salvo 💕');
+  var lem = draft.reminders.map(function (r) { return { t: r.t || '', txt: (r.txt || '').trim() }; }).filter(function (r) { return r.txt; });
+  var e;
+  if (draftFuture) e = lem.length ? { period: false, flow: null, cramps: null, mood: null, sex: false, reminders: lem } : null;
+  else {
+    var vazio = !draft.period && !draft.flow && !draft.cramps && !draft.mood && !draft.sex && !lem.length;
+    e = vazio ? null : { period: draft.period, flow: draft.flow, cramps: draft.cramps, mood: draft.mood, sex: draft.sex, reminders: lem };
+  }
+  var tinha = !!entries[draftKey];
+  setEntry(draftKey, e); closeAll();
+  toast(e ? (draftFuture ? 'Lembretes salvos 🔔' : 'Registro salvo 💕') : tinha ? 'Apagado' : 'Nada para salvar');
 }
 function setEntry(k, e) {
   if (e) entries[k] = e; else delete entries[k];
@@ -589,13 +793,22 @@ function apiPost(body) {
 var flushing = false;
 function flush() {
   if (!cfg || flushing) return Promise.resolve();
-  var keys = Object.keys(pending); if (!keys.length) return Promise.resolve();
+  var goalP = sendGoal();
+  var keys = Object.keys(pending), wkeys = Object.keys(pendingWater);
+  if (!keys.length && !wkeys.length) return goalP;
   flushing = true;
-  var items = keys.map(function (k) { return { date: k, entry: entries[k] || null }; });
-  return apiPost({ a: 'save', items: items }).then(function (r) {
+  var sentE = {}, sentW = {};
+  var items = keys.map(function (k) { sentE[k] = JSON.stringify(entries[k] || null); return { date: k, entry: entries[k] || null }; });
+  var wl = wkeys.map(function (k) { var q = k.split('|'); sentW[k] = pendingWater[k]; return { date: q[0], p: +q[1], ml: pendingWater[k] }; });
+  return apiPost({ a: 'save', items: items, water: wl }).then(function (r) {
     if (!r.ok) throw new Error(r.error || 'erro');
-    keys.forEach(function (k) { delete pending[k]; }); syncState = 'ok'; persist();
-  }).catch(function () { syncState = 'err'; }).then(function () { flushing = false; render(); });
+    keys.forEach(function (k) { if (JSON.stringify(entries[k] || null) === sentE[k]) delete pending[k]; });
+    wkeys.forEach(function (k) { if (pendingWater[k] === sentW[k]) delete pendingWater[k]; });
+    syncState = 'ok'; persist();
+  }).catch(function () { syncState = 'err'; }).then(function () {
+    flushing = false; render();
+    if (syncState === 'ok' && (Object.keys(pending).length || Object.keys(pendingWater).length)) scheduleFlush();
+  });
 }
 function pull() {
   if (!cfg) return Promise.resolve();
@@ -603,7 +816,16 @@ function pull() {
     if (!r.ok) throw new Error(r.error || 'erro');
     var novo = r.entries || {};
     Object.keys(pending).forEach(function (k) { if (entries[k]) novo[k] = entries[k]; else delete novo[k]; });
-    entries = novo; if (r.vapid) { vapid = r.vapid; store.set('vapid', vapid); }
+    entries = novo;
+    var nw = r.water || {};
+    Object.keys(pendingWater).forEach(function (k) { var q = k.split('|'); (nw[q[0]] = nw[q[0]] || {})[q[1]] = pendingWater[k]; });
+    water = nw; store.set('water', water);
+    if (r.people && r.people.length === 2) {
+      people = r.people;
+      if (pendingGoal != null && me != null) people[me].goal = pendingGoal;
+      store.set('people', people);
+    }
+    if (r.vapid) { vapid = r.vapid; store.set('vapid', vapid); }
     syncState = 'ok'; persist(); render();
   }).catch(function () { syncState = 'err'; render(); });
 }
@@ -651,7 +873,7 @@ function openCfg() {
     sh.appendChild(cp);
     var sy = el('button', 'btn2', 'Sincronizar agora'); sy.onclick = function () { pull().then(function () { toast(syncState === 'ok' ? 'Sincronizado' : 'Sem conexão'); }); }; sh.appendChild(sy);
     var off = el('button', 'ghost', 'Desconectar este celular');
-    off.onclick = function () { if (confirm('Desconectar? Os registros continuam na planilha.')) { cfg = null; pending = {}; store.set('cfg', null); persist(); render(); openCfg(); } };
+    off.onclick = function () { if (confirm('Desconectar? Os registros continuam na planilha.')) { cfg = null; pending = {}; pendingWater = {}; pendingGoal = null; store.set('pendingGoal', null); store.set('cfg', null); persist(); render(); openCfg(); } };
     sh.appendChild(off);
   } else {
     sh.appendChild(el('span', 'pill', 'Dados só neste celular'));
@@ -671,6 +893,7 @@ function openCfg() {
         if (!r.ok) throw new Error(r.error);
         store.set('cfg', cfg);
         Object.keys(locais).forEach(function (k) { if (!(r.entries || {})[k]) pending[k] = 1; });   // envia o que já existia aqui
+        Object.keys(water).forEach(function (d) { [0, 1].forEach(function (q) { if (water[d][q] && !((r.water || {})[d] || {})[q]) pendingWater[d + '|' + q] = water[d][q]; }); });
         return pull();
       }).then(function () { toast('Conectado 💕'); openCfg(); })
         .catch(function (e) { cfg = null; go.disabled = false; go.textContent = 'Conectar'; toast(e && e.message === 'senha' ? 'Senha incorreta' : 'Não foi possível conectar'); });
@@ -678,8 +901,12 @@ function openCfg() {
     sh.appendChild(go);
   }
 
+  sh.appendChild(el('div', 'sec', '👤 Quem usa este celular'));
+  choosePerson(sh);
+  if (me != null) { var gb = el('button', 'btn2', 'Minha meta de água: ' + fmtMl(people[me].goal)); gb.onclick = openGoal; sh.appendChild(gb); }
+
   sh.appendChild(el('div', 'sec', '🔔 Notificações'));
-  sh.appendChild(el('p', 'help', '7h: previsão do tempo (máxima, mínima e chance de chuva). 20h: dias para a menstruação e para o período fértil.'));
+  sh.appendChild(el('p', 'help', '7h: previsão do tempo (máxima, mínima e chance de chuva). 20h: dias para a menstruação e para o período fértil. Lembretes: no horário marcado.'));
   var st = el('span', 'pill' + (pushOn ? ' ok' : ''), pushOn ? 'Ativadas neste celular' : 'Desativadas neste celular'); st.style.marginTop = '8px'; sh.appendChild(st);
   if (!pushOn) { var on = el('button', 'btn2', 'Ativar notificações neste celular'); on.onclick = enablePush; sh.appendChild(on); }
   else { var te = el('button', 'btn2', 'Enviar notificação de teste'); te.onclick = testPush; sh.appendChild(te); }
@@ -716,6 +943,7 @@ $('banner').onclick = function () { store.set('hideInstall', true); render(); };
 document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pull(); loadWeather(); } });
 window.addEventListener('online', function () { pull(); });
 setInterval(render, 60000);     // troca a frase quando muda o turno
+setInterval(function () { if (!document.hidden) pull(); }, 90000);   // traz a água do outro celular
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
 render(); mirror(); loadWeather(); pull(); checkPush();

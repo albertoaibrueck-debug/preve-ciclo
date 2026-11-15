@@ -1,7 +1,7 @@
 /* Préve Ciclo — service worker: funcionamento offline + notificações */
 importScripts('core.js');
 
-var SHELL = 'ciclo-shell-v1';
+var SHELL = 'ciclo-shell-v2';
 var FILES = ['./', 'index.html', 'core.js', 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-180.png'];
 
 self.addEventListener('install', function (e) {
@@ -35,22 +35,40 @@ function withTimeout(p, ms) {
   return Promise.race([p, new Promise(function (res) { setTimeout(function () { res(null); }, ms); })]).catch(function () { return null; });
 }
 
-/* O servidor (Apps Script) manda um "toque" sem conteúdo às 7h e às 20h.
-   O texto é montado aqui: de manhã a previsão do tempo, à noite o ciclo. */
+function readShown() {
+  return caches.open('ciclo-state').then(function (c) { return c.match('shown.json'); })
+    .then(function (r) { return r ? r.json() : []; }).catch(function () { return []; });
+}
+function saveShown(ids) {
+  return caches.open('ciclo-state').then(function (c) { return c.put('shown.json', new Response(JSON.stringify(ids))); }).catch(function () {});
+}
+
+/* O servidor (Apps Script) manda um "toque" sem conteúdo e guarda numa fila o motivo
+   (tempo às 7h, ciclo às 20h, lembrete no horário marcado ou teste).
+   Aqui o app lê a fila e monta cada notificação ainda não mostrada. */
 self.addEventListener('push', function (e) {
   e.waitUntil(readState().then(function (st) {
     var loc = st.loc || { lat: -25.43, lon: -49.27, name: 'Curitiba' };
     var fresh = st.cfg ? withTimeout(fetch(st.cfg.url + '?k=' + encodeURIComponent(st.cfg.key) + '&a=all&t=' + Date.now()).then(function (r) { return r.json(); }), 9000) : Promise.resolve(null);
-    var wx = withTimeout(Ciclo.fetchWeather(loc.lat, loc.lon), 9000);
-    return Promise.all([fresh, wx]).then(function (res) {
-      var data = res[0], entries = (data && data.ok && data.entries) || st.entries || {};
-      var isTest = data && data.testAt && Date.now() - data.testAt < 180000;
-      var ciclo = Ciclo.cycleMessage(entries), tempo = Ciclo.weatherMessage(res[1], loc.name);
-      var manha = new Date().getHours() < 14, msg;
-      if (isTest) msg = { title: 'Préve Ciclo 💕 (teste)', body: ciclo.body + (tempo ? '\n' + tempo.title + ': ' + tempo.body : '') };
-      else if (manha) msg = tempo || { title: 'Préve Ciclo 💕', body: 'Bom dia! Não consegui buscar a previsão do tempo agora.' };
-      else msg = ciclo;
-      return self.registration.showNotification(msg.title, { body: msg.body, icon: 'icon-192.png', badge: 'icon-192.png', tag: isTest ? 'teste' : manha ? 'tempo' : 'ciclo' });
+    return Promise.all([fresh, readShown()]).then(function (res) {
+      var data = res[0] && res[0].ok ? res[0] : null, shown = res[1] || [];
+      var entries = (data && data.entries) || st.entries || {}, now = Date.now(), items = [];
+      if (data && data.pushes) items = data.pushes.filter(function (p) { return now - p.at < 3600000 && shown.indexOf(p.id) < 0; });
+      if (!items.length) items = [{ kind: new Date().getHours() < 14 ? 'tempo' : 'ciclo', id: null }];
+      var needWx = items.some(function (p) { return p.kind === 'tempo' || p.kind === 'teste'; });
+      return (needWx ? withTimeout(Ciclo.fetchWeather(loc.lat, loc.lon), 9000) : Promise.resolve(null)).then(function (w) {
+        var tempo = Ciclo.weatherMessage(w, loc.name), ciclo = Ciclo.cycleMessage(entries);
+        return Promise.all(items.map(function (p) {
+          var msg;
+          if (p.kind === 'lembrete') msg = { title: p.title || '🔔 Lembrete', body: p.body || '' };
+          else if (p.kind === 'teste') msg = { title: 'Préve Ciclo 💕 (teste)', body: ciclo.body + (tempo ? '\n' + tempo.title + ': ' + tempo.body : '') };
+          else if (p.kind === 'tempo') msg = tempo || { title: 'Préve Ciclo 💕', body: 'Bom dia! Não consegui buscar a previsão do tempo agora.' };
+          else msg = ciclo;
+          return self.registration.showNotification(msg.title, { body: msg.body, icon: 'icon-192.png', badge: 'icon-192.png', tag: p.kind + (p.id || '') });
+        })).then(function () {
+          return saveShown(shown.concat(items.map(function (p) { return p.id; }).filter(Boolean)).slice(-30));
+        });
+      });
     });
   }));
 });
