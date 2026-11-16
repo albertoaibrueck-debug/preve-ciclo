@@ -1,4 +1,4 @@
-/* Préve Ciclo — lógica do ciclo (usada pela página e pelo service worker) */
+/* Mon Quotidien — lógica do ciclo (usada pela página e pelo service worker) */
 (function (root) {
   'use strict';
   var DAY = 86400000;
@@ -117,7 +117,7 @@
     if (t == null) t = today();
     var a = analyze(entries, t);
     if (!a.last) {
-      return { title: 'Préve Ciclo 💕', body: 'Registre a última menstruação para começar as previsões.' };
+      return { title: 'Mon Quotidien 💕', body: 'Registre a última menstruação para começar as previsões.' };
     }
     var p, d = a.next - t;
     if (a.ongoing) p = '🩸 Dia ' + a.cycleDay + ' da menstruação · próxima em ' + plural(d, 'dia', 'dias');
@@ -130,7 +130,7 @@
       if (f.now) q = f.isOv ? '🌸 Ovulação prevista para hoje' : '🌸 Período fértil agora (mais ' + plural(f.left, 'dia', 'dias') + ')';
       else q = '🌸 ' + (f.days === 1 ? 'Falta 1 dia' : 'Faltam ' + f.days + ' dias') + ' para o período fértil';
     }
-    return { title: 'Préve Ciclo 💕', body: p + (q ? '\n' + q : '') };
+    return { title: 'Mon Quotidien 💕', body: p + (q ? '\n' + q : '') };
   }
 
   function fetchWeather(lat, lon) {

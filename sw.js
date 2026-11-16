@@ -1,7 +1,7 @@
-/* Préve Ciclo — service worker: funcionamento offline + notificações */
+/* Mon Quotidien — service worker: funcionamento offline + notificações */
 importScripts('core.js');
 
-var SHELL = 'ciclo-shell-v2';
+var SHELL = 'ciclo-shell-v3';
 var FILES = ['./', 'index.html', 'core.js', 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-180.png'];
 
 self.addEventListener('install', function (e) {
@@ -61,8 +61,8 @@ self.addEventListener('push', function (e) {
         return Promise.all(items.map(function (p) {
           var msg;
           if (p.kind === 'lembrete') msg = { title: p.title || '🔔 Lembrete', body: p.body || '' };
-          else if (p.kind === 'teste') msg = { title: 'Préve Ciclo 💕 (teste)', body: ciclo.body + (tempo ? '\n' + tempo.title + ': ' + tempo.body : '') };
-          else if (p.kind === 'tempo') msg = tempo || { title: 'Préve Ciclo 💕', body: 'Bom dia! Não consegui buscar a previsão do tempo agora.' };
+          else if (p.kind === 'teste') msg = { title: 'Mon Quotidien 💕 (teste)', body: ciclo.body + (tempo ? '\n' + tempo.title + ': ' + tempo.body : '') };
+          else if (p.kind === 'tempo') msg = tempo || { title: 'Mon Quotidien 💕', body: 'Bom dia! Não consegui buscar a previsão do tempo agora.' };
           else msg = ciclo;
           return self.registration.showNotification(msg.title, { body: msg.body, icon: 'icon-192.png', badge: 'icon-192.png', tag: p.kind + (p.id || '') });
         })).then(function () {
